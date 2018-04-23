@@ -30,11 +30,6 @@ else
     $version = $app->getVersion().'.'.$app->getBuild();
 }
 
-if ($tablePrefix)
-{
-    throw new Exception('This tool requires Craft to be configured without a DB table prefix.');
-}
-
 $run = !empty($_POST['run']);
 
 if ($run)
@@ -49,10 +44,18 @@ if ($run)
         {
             foreach ($table->fks as $fk)
             {
+                $tableName = $fk->table->name;
+                $refTableName = $fk->refTable;
+
+                if ($tablePrefix) {
+                    $tableName = $tablePrefix . '_' . $tableName;
+                    $refTableName = $tablePrefix . '_' . $refTableName;
+                }
+
                 $fks[] = array(
-                    $fk->table->name,
+                    $tableName,
                     implode(',', $fk->columns),
-                    $fk->refTable,
+                    $refTableName,
                     implode(',', $fk->refColumns),
                     $fk->onDelete,
                     $fk->onUpdate,

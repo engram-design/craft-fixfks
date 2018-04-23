@@ -87,9 +87,16 @@ if ($backupDb)
 
 $report = array();
 
+$tablePrefix = $app->config->get('tablePrefix', ConfigFile::Db);
+
 foreach ($fks as $fk)
 {
     list($tableName, $columns, $refTableName, $refColumns, $onDelete, $onUpdate, $fkName) = $fk;
+
+    if ($tablePrefix) {
+        $tableName = str_replace($tablePrefix . '_', '', $tableName);
+        $refTableName = str_replace($tablePrefix . '_', '', $refTableName);
+    }
 
     // Make sure the table exists
     if (MigrationHelper::getTable($tableName) === null)
