@@ -21,34 +21,16 @@ if (CRAFT_SCHEMA_VERSION !== $app->getSchemaVersion())
     throw new Exception('Invalid schema version');
 }
 
-// Make sure we have a FK dump from the same Craft version
-$version = $app->getVersion();
-$fkDumpFile = "fkdumps/$version.json";
+$fks = [];
 
-if (!file_exists($fkDumpFile))
+// Are there any Super Table content tables?
+$tables = MigrationHelper::getTables();
+
+foreach ($tables as $tableName => $table)
 {
-    throw new Exception('No FK dump file exists');
-}
-
-// Load the FK dump
-$fksJson = file_get_contents($fkDumpFile);
-$fks = JsonHelper::decode($fksJson);
-
-// Are there any Matrix fields?
-$matrixFields = $app->db->createCommand()
-    ->from('fields')
-    ->where('type = :type', array(':type' => 'Matrix'))
-    ->queryAll();
-
-foreach ($matrixFields as $result)
-{
-    if ($result['settings'])
-    {
-        $result['settings'] = JsonHelper::decode($result['settings']);
+    if (!strstr($tableName, 'supertablecontent_')) {
+        continue;
     }
-
-    $field = new FieldModel($result);
-    $tableName = $app->matrix->getContentTableName($field);
 
     $fks[] = array(
         $tableName,
@@ -87,16 +69,9 @@ if ($backupDb)
 
 $report = array();
 
-$tablePrefix = $app->config->get('tablePrefix', ConfigFile::Db);
-
 foreach ($fks as $fk)
 {
     list($tableName, $columns, $refTableName, $refColumns, $onDelete, $onUpdate, $fkName) = $fk;
-
-    if ($tablePrefix) {
-        $tableName = str_replace($tablePrefix . '_', '', $tableName);
-        $refTableName = str_replace($tablePrefix . '_', '', $refTableName);
-    }
 
     // Make sure the table exists
     if (MigrationHelper::getTable($tableName) === null)
